@@ -1,0 +1,256 @@
+// Variáveis globais
+int boardSize = 300; // Tamanho do tabuleiro
+int cellSize = boardSize / 3; // Tamanho de cada célula
+int[][] board = new int[3][3]; // 0 = vazio, 1 = X, 2 = O
+int currentPlayer = 1; // Começa com X
+boolean gameOver = false;
+int winner = 0; // 0 = sem vencedor, 1 = X, 2 = O, 3 = empate
+boolean vsComputer = false; // Modo de jogo (true = vs computador, false = vs jogador)
+
+void setup() {
+  size(400, 450); // Largura x Altura (incluindo espaço para mensagens e botões)
+  resetGame();
+}
+
+void draw() {
+  background(255);
+  drawBoard();
+  drawStatus();
+  drawButtons();
+  
+  if (gameOver) {
+    drawGameOver();
+  }
+}
+
+void drawBoard() {
+  // Desenha as linhas do tabuleiro
+  strokeWeight(4);
+  line(cellSize, 0, cellSize, boardSize);
+  line(cellSize * 2, 0, cellSize * 2, boardSize);
+  line(0, cellSize, boardSize, cellSize);
+  line(0, cellSize * 2, boardSize, cellSize * 2);
+  
+  // Desenha os X e O nas células
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == 1) { // X
+        drawX(i, j);
+      } else if (board[i][j] == 2) { // O
+        drawO(i, j);
+      }
+    }
+  }
+}
+
+void drawX(int i, int j) {
+  stroke(255, 0, 0); // Vermelho para X
+  line(i * cellSize + 20, j * cellSize + 20, (i + 1) * cellSize - 20, (j + 1) * cellSize - 20);
+  line((i + 1) * cellSize - 20, j * cellSize + 20, i * cellSize + 20, (j + 1) * cellSize - 20);
+}
+
+void drawO(int i, int j) {
+  stroke(0, 0, 255); // Azul para O
+  noFill();
+  ellipse(i * cellSize + cellSize/2, j * cellSize + cellSize/2, cellSize - 40, cellSize - 40);
+}
+
+void drawStatus() {
+  fill(0);
+  textSize(20);
+  
+  if (!gameOver) {
+    if (vsComputer && currentPlayer == 2) {
+      text("Vez do Computador (O)", 10, boardSize + 30);
+    } else {
+      text("Vez do Jogador " + (currentPlayer == 1 ? "X" : "O"), 10, boardSize + 30);
+    }
+  }
+}
+
+void drawButtons() {
+  // Botão para reiniciar o jogo
+  fill(200);
+  rect(10, boardSize + 60, 180, 40, 5);
+  fill(0);
+  text("Reiniciar Jogo", 40, boardSize + 85);
+  
+  // Botão para alternar modo de jogo
+  fill(200);
+  rect(210, boardSize + 60, 180, 40, 5);
+  fill(0);
+  text(vsComputer ? "Jogar vs Humano" : "Jogar vs Computador", 220, boardSize + 85);
+}
+
+void drawGameOver() {
+  fill(0, 150);
+  rect(50, 100, 200, 100, 10);
+  fill(255);
+  textSize(24);
+  
+  if (winner == 3) {
+    text("Empate!", 120, 150);
+  } else {
+    text("Jogador " + (winner == 1 ? "X" : "O") + " venceu!", 80, 150);
+  }
+  
+  textSize(16);
+  text("Clique para continuar", 90, 180);
+}
+
+void mousePressed() {
+  if (gameOver) {
+    resetGame();
+    return;
+  }
+  
+  // Verifica clique nos botões
+  if (mouseY > boardSize + 60 && mouseY < boardSize + 100) {
+    if (mouseX > 10 && mouseX < 190) {
+      resetGame(); // Botão Reiniciar
+    } else if (mouseX > 210 && mouseX < 390) {
+      vsComputer = !vsComputer; // Botão Alternar Modo
+      resetGame();
+    }
+    return;
+  }
+  
+  // Verifica clique no tabuleiro (só se for a vez do jogador humano)
+  if (!gameOver && mouseX < boardSize && mouseY < boardSize && 
+      (!vsComputer || (vsComputer && currentPlayer == 1))) {
+    int i = mouseX / cellSize;
+    int j = mouseY / cellSize;
+    
+    if (board[i][j] == 0) { // Célula vazia
+      board[i][j] = currentPlayer;
+      checkGameOver();
+      
+      if (!gameOver && vsComputer) {
+        currentPlayer = 2;
+        // Adiciona um pequeno atraso para a jogada do computador
+        delay(500);
+        computerMove();
+        checkGameOver();
+      }
+    }
+  }
+}
+
+void computerMove() {
+  // Primeiro verifica se pode vencer na próxima jogada
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == 0) {
+        board[i][j] = 2; // O
+        if (checkWinner() == 2) {
+          return; // Computador vence
+        }
+        board[i][j] = 0; // Desfaz
+      }
+    }
+  }
+  
+  // Depois verifica se precisa bloquear o jogador
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == 0) {
+        board[i][j] = 1; // X
+        if (checkWinner() == 1) {
+          board[i][j] = 2; // Bloqueia
+          return;
+        }
+        board[i][j] = 0; // Desfaz
+      }
+    }
+  }
+  
+  // Tenta jogar no centro se estiver vazio
+  if (board[1][1] == 0) {
+    board[1][1] = 2;
+    return;
+  }
+  
+  // Joga em um canto vazio aleatório
+  int[] corners = {0, 2};
+  for (int i : corners) {
+    for (int j : corners) {
+      if (board[i][j] == 0) {
+        if (random(1) > 0.5) { // Aleatoriedade para não ser previsível
+          board[i][j] = 2;
+          return;
+        }
+      }
+    }
+  }
+  
+  // Joga em qualquer posição vazia
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == 0) {
+        board[i][j] = 2;
+        return;
+      }
+    }
+  }
+}
+
+void checkGameOver() {
+  winner = checkWinner();
+  
+  if (winner != 0) {
+    gameOver = true;
+  } else if (isBoardFull()) {
+    gameOver = true;
+    winner = 3; // Empate
+  } else {
+    currentPlayer = currentPlayer == 1 ? 2 : 1; // Alterna jogador
+  }
+}
+
+int checkWinner() {
+  // Verifica linhas
+  for (int j = 0; j < 3; j++) {
+    if (board[0][j] != 0 && board[0][j] == board[1][j] && board[1][j] == board[2][j]) {
+      return board[0][j];
+    }
+  }
+  
+  // Verifica colunas
+  for (int i = 0; i < 3; i++) {
+    if (board[i][0] != 0 && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
+      return board[i][0];
+    }
+  }
+  
+  // Verifica diagonais
+  if (board[0][0] != 0 && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
+    return board[0][0];
+  }
+  if (board[2][0] != 0 && board[2][0] == board[1][1] && board[1][1] == board[0][2]) {
+    return board[2][0];
+  }
+  
+  return 0; // Sem vencedor
+}
+
+boolean isBoardFull() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void resetGame() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      board[i][j] = 0;
+    }
+  }
+  currentPlayer = 1;
+  gameOver = false;
+  winner = 0;
+}
