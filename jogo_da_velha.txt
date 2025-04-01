@@ -1,0 +1,261 @@
+int screen = 0; // 0 = Menu, 1 = Jogo PvP, 2 = Jogo PvE, 3 = Tela de Escolha de Rounds
+char[][] board = new char[3][3];
+boolean playerTurn = true;
+boolean gameOver = false;
+char winner = ' ';
+int playerXWins = 0;
+int playerOWins = 0;
+int totalRounds = 3;
+int currentRound = 1;
+boolean roundSelection = false;
+boolean isPvP = true; // Variável para determinar se é PvP ou PvE
+
+void setup() {
+  size(400, 400);
+  resetBoard();
+}
+
+void draw() {
+  background(255);
+  switch(screen) {
+    case 0: drawMenu(); break;          // Tela do menu
+    case 3: drawRoundSelection(); break; // Tela de seleção de rounds
+    case 1: case 2: drawGame(); break;  // Jogo PvP ou PvE
+  }
+}
+
+void drawMenu() {
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  fill(0);
+  text("Jogo da Velha", width / 2, 50);
+  textSize(24);
+  text("1. Jogar contra Player", width / 2, 150);
+  text("2. Jogar contra Máquina", width / 2, 200);
+}
+
+void drawRoundSelection() {
+  textSize(24);
+  textAlign(CENTER, CENTER);
+  fill(0);
+  text("Escolha o número de rounds:", width / 2, 100);
+  text("1. 3 Rounds", width / 2, 150);
+  text("2. 5 Rounds", width / 2, 200);
+  text("3. 9 Rounds", width / 2, 250);
+}
+
+void drawGame() {
+  drawBoard();
+  drawScoreboard(); // Exibe o placar
+  if (gameOver) drawWinner();
+}
+
+void drawBoard() {
+  stroke(0);
+  for (int i = 1; i <= 2; i++) {
+    line(i * width / 3, 0, i * width / 3, height);
+    line(0, i * height / 3, width, i * height / 3);
+  }
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] != ' ') {
+        text(board[i][j], j * width / 3 + width / 6, i * height / 3 + height / 6);
+      }
+    }
+  }
+  textSize(16);
+  text("Rodada: " + currentRound + "/" + totalRounds, width / 6, height - 10);
+}
+
+void drawScoreboard() {
+  textSize(16);
+  fill(0);
+  text("Placar - X: " + playerXWins + " | O: " + playerOWins, width * 5 / 6, height - 10);
+}
+
+void drawWinner() {
+  textSize(24);
+  textAlign(CENTER, CENTER);
+  fill(0);
+  if (currentRound < totalRounds) {
+    text("Vencedor: " + (winner == 'D' ? "Empate" : winner), width / 2, height - 70);
+    text("Clique para continuar", width / 2, height - 240);
+  } else {
+    text("Campeão Final: " + (winner == 'D' ? "Empate!" : winner), width / 2, height - 70);
+    text("Placar final - X: " + playerXWins + " | O: " + playerOWins, width / 2, height - 40);
+    text("Clique para ir ao Menu", width / 2, height - 240);
+  }
+}
+
+void mousePressed() {
+  if (screen == 0) handleMenuSelection();
+  else if (screen == 3) handleRoundSelection();
+  else if (gameOver) nextRound();
+  else handlePlayerMove();
+}
+
+void handleMenuSelection() {
+  if (mouseY > 130 && mouseY < 170) {
+    screen = 3; // Vai para a seleção de rounds
+    isPvP = true; // Jogo contra Player
+  } else if (mouseY > 180 && mouseY < 220) {
+    screen = 3; // Vai para a seleção de rounds
+    isPvP = false; // Jogo contra Máquina
+  }
+}
+
+void handleRoundSelection() {
+  if (mouseY > 130 && mouseY < 170) totalRounds = 3;
+  else if (mouseY > 180 && mouseY < 220) totalRounds = 5;
+  else if (mouseY > 230 && mouseY < 270) totalRounds = 9;
+
+  roundSelection = false;
+  resetBoard();
+  screen = 1; // Inicia o Jogo PvP ou PvE dependendo de isPvP
+}
+
+void handlePlayerMove() {
+  int col = mouseX / (width / 3);
+  int row = mouseY / (height / 3);
+
+  if (row >= 0 && row < 3 && col >= 0 && col < 3 && board[row][col] == ' ') {
+    board[row][col] = playerTurn ? 'X' : 'O';
+    playerTurn = !playerTurn;
+    checkWinner();
+
+    if (!isPvP && !playerTurn && !gameOver) {
+      aiMove(); // Faz o movimento do bot se for PvE
+      playerTurn = true;
+      checkWinner();
+    }
+  }
+}
+
+void aiMove() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == ' ') {
+        board[i][j] = 'O';
+        if (checkWinningMove('O')) return;
+        board[i][j] = ' '; // Desfaz a jogada
+
+        board[i][j] = 'X';
+        if (checkWinningMove('X')) {
+          board[i][j] = 'O';
+          return;
+        }
+        board[i][j] = ' '; // Desfaz a jogada
+      }
+    }
+  }
+
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if (board[i][j] == ' ') {
+        board[i][j] = 'O';
+        return;
+      }
+    }
+  }
+}
+
+boolean checkWinningMove(char player) {
+  for (int i = 0; i < 3; i++) {
+    if (board[i][0] == player && board[i][1] == player && board[i][2] == player) return true;
+    if (board[0][i] == player && board[1][i] == player && board[2][i] == player) return true;
+  }
+  if (board[0][0] == player && board[1][1] == player && board[2][2] == player) return true;
+  if (board[0][2] == player && board[1][1] == player && board[2][0] == player) return true;
+  return false;
+}
+
+void resetBoard() {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      board[i][j] = ' ';
+    }
+  }
+  playerTurn = true;
+  gameOver = false;
+  winner = ' ';
+}
+
+void nextRound() {
+  if (currentRound < totalRounds) {
+    currentRound++;
+    resetBoard();
+  } else {
+    announceFinalWinner(); 
+    resetGame(); 
+  }
+}
+
+void resetGame() {
+  // Resetar a pontuação dos jogadores e variáveis relacionadas ao jogo
+  playerXWins = 0;
+  playerOWins = 0;
+  currentRound = 1;
+  totalRounds = 3; // Ou qualquer número que você definir como padrão
+  screen = 0; // Vai para o menu
+  roundSelection = false;
+  resetBoard(); // Reseta o tabuleiro
+}
+
+void declareWinner(char w) {
+  winner = w;
+  gameOver = true;
+  if (winner == 'X') playerXWins++;
+  if (winner == 'O') playerOWins++;
+}
+
+
+void announceFinalWinner() {
+  // Definir o vencedor final com base nas pontuações
+  if (playerXWins > playerOWins) {
+    winner = 'X';
+  } else if (playerOWins > playerXWins) {
+    winner = 'O';
+  } else {
+    winner = 'D'; // Empate
+  }
+}
+
+
+void checkWinner() {
+  for (int i = 0; i < 3; i++) {
+    if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
+      declareWinner(board[i][0]);
+      return;
+    }
+    if (board[0][i] != ' ' && board[0][i] == board[1][i] && board[1][i] == board[2][i]) {
+      declareWinner(board[0][i]);
+      return;
+    }
+  }
+  if (board[0][0] != ' ' && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
+    declareWinner(board[0][0]);
+    return;
+  }
+  if (board[0][2] != ' ' && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
+    declareWinner(board[0][2]);
+    return;
+  }
+
+  boolean draw = true;
+  for (char[] row : board) {
+    for (char cell : row) {
+      if (cell == ' ') {
+        draw = false;
+        break;
+      }
+    }
+    if (!draw) break;
+  }
+
+  if (draw) {
+    winner = 'D';
+    gameOver = true;
+  }
+}

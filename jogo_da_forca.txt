@@ -1,0 +1,292 @@
+// Jogo da Forca em Processing
+// Autor: [Seu Nome]
+// Data: [Data]
+
+// Variáveis do jogo
+String[] categorias = {"Frutas", "Cidades", "Animais", "Países"};
+String[][] palavras = {
+  {"BANANA", "MORANGO", "ABACAXI", "LARANJA", "UVA", "MELANCIA", "KIWI"},
+  {"SÃO PAULO", "RIO DE JANEIRO", "BELO HORIZONTE", "SALVADOR", "CURITIBA", "PORTO ALEGRE"},
+  {"ELEFANTE", "GIRAFA", "TIGRE", "LEÃO", "ZEBRA", "RINOCERONTE"},
+  {"BRASIL", "ARGENTINA", "CANADÁ", "JAPÃO", "AUSTRÁLIA", "ALEMANHA"}
+};
+
+int categoriaSelecionada = 0;
+String palavraSecreta = "";
+char[] letrasDescobertas;
+ArrayList<Character> letrasErradas = new ArrayList<Character>();
+ArrayList<Character> letrasTentadas = new ArrayList<Character>();
+int tentativasRestantes = 6;
+boolean jogoAtivo = false;
+boolean vitoria = false;
+boolean derrota = false;
+
+// Configuração inicial
+void setup() {
+  size(800, 600);
+  textAlign(CENTER, CENTER);
+  textSize(24);
+  selecionarNovaPalavra(0); // Começa com a primeira categoria
+}
+
+// Loop principal
+void draw() {
+  background(240);
+  
+  if (!jogoAtivo) {
+    telaInicial();
+  } else if (vitoria) {
+    telaVitoria();
+  } else if (derrota) {
+    telaDerrota();
+  } else {
+    desenharForca();
+    desenharPalavra();
+    desenharLetrasErradas();
+    verificarFimDoJogo();
+  }
+}
+
+// Tela inicial para selecionar categoria
+void telaInicial() {
+  fill(0);
+  textSize(32);
+  text("JOGO DA FORCA", width/2, 80);
+  textSize(24);
+  text("Selecione uma categoria:", width/2, 150);
+  
+  // Desenhar botões de categoria
+  for (int i = 0; i < categorias.length; i++) {
+    fill(200);
+    rect(width/2 - 150, 200 + i*70, 300, 50, 10);
+    fill(0);
+    text(categorias[i], width/2, 225 + i*70);
+  }
+}
+
+// Tela de vitória
+void telaVitoria() {
+  desenharForca();
+  desenharPalavra();
+  
+  fill(0, 180, 0, 200);
+  rect(width/4, height/3, width/2, height/3, 20);
+  fill(255);
+  textSize(32);
+  text("PARABÉNS!", width/2, height/2 - 30);
+  textSize(24);
+  text("Você acertou a palavra:", width/2, height/2 + 10);
+  text(palavraSecreta, width/2, height/2 + 50);
+  
+  // Botão para jogar novamente
+  fill(50, 150, 255);
+  rect(width/2 - 100, height/2 + 100, 200, 50, 10);
+  fill(255);
+  text("Jogar Novamente", width/2, height/2 + 125);
+}
+
+// Tela de derrota
+void telaDerrota() {
+  desenharForca();
+  desenharPalavra();
+  
+  fill(180, 0, 0, 200);
+  rect(width/4, height/3, width/2, height/3, 20);
+  fill(255);
+  textSize(32);
+  text("FIM DE JOGO", width/2, height/2 - 30);
+  textSize(24);
+  text("A palavra era:", width/2, height/2 + 10);
+  text(palavraSecreta, width/2, height/2 + 50);
+  
+  // Botão para jogar novamente
+  fill(50, 150, 255);
+  rect(width/2 - 100, height/2 + 100, 200, 50, 10);
+  fill(255);
+  text("Jogar Novamente", width/2, height/2 + 125);
+}
+
+// Desenha a forca e o boneco
+void desenharForca() {
+  stroke(0);
+  strokeWeight(4);
+  
+  // Base
+  line(100, 500, 300, 500);
+  // Poste vertical
+  line(150, 500, 150, 100);
+  // Topo
+  line(150, 100, 300, 100);
+  // Corda
+  line(300, 100, 300, 150);
+  
+  // Desenhar o boneco baseado nas tentativas restantes
+  if (tentativasRestantes < 6) { // Cabeça
+    ellipse(300, 180, 60, 60);
+  }
+  if (tentativasRestantes < 5) { // Corpo
+    line(300, 210, 300, 350);
+  }
+  if (tentativasRestantes < 4) { // Braço esquerdo
+    line(300, 250, 250, 300);
+  }
+  if (tentativasRestantes < 3) { // Braço direito
+    line(300, 250, 350, 300);
+  }
+  if (tentativasRestantes < 2) { // Perna esquerda
+    line(300, 350, 250, 420);
+  }
+  if (tentativasRestantes < 1) { // Perna direita
+    line(300, 350, 350, 420);
+  }
+  
+  // Mostrar tentativas restantes
+  fill(0);
+  textSize(20);
+  text("Tentativas restantes: " + tentativasRestantes, 650, 100);
+}
+
+// Desenha a palavra com traços e letras descobertas
+void desenharPalavra() {
+  textSize(36);
+  fill(0);
+  
+  for (int i = 0; i < letrasDescobertas.length; i++) {
+    float x = 400 + i * 40;
+    float y = 400;
+    
+    // Desenhar traço
+    line(x - 15, y + 10, x + 15, y + 10);
+    
+    // Desenhar letra se descoberta
+    if (letrasDescobertas[i] != '_') {
+      text(letrasDescobertas[i], x, y);
+    }
+  }
+}
+
+// Desenha as letras erradas
+void desenharLetrasErradas() {
+  textSize(20);
+  fill(180, 0, 0);
+  text("Letras erradas:", 650, 150);
+  
+  for (int i = 0; i < letrasErradas.size(); i++) {
+    text(letrasErradas.get(i), 650 + i * 20, 180);
+  }
+}
+
+// Verifica se o jogo terminou (vitória ou derrota)
+void verificarFimDoJogo() {
+  // Verificar vitória
+  boolean completa = true;
+  for (char c : letrasDescobertas) {
+    if (c == '_') {
+      completa = false;
+      break;
+    }
+  }
+  
+  if (completa) {
+    vitoria = true;
+    jogoAtivo = false;
+    return;
+  }
+  
+  // Verificar derrota
+  if (tentativasRestantes <= 0) {
+    derrota = true;
+    jogoAtivo = false;
+    // Revelar palavra
+    for (int i = 0; i < palavraSecreta.length(); i++) {
+      letrasDescobertas[i] = palavraSecreta.charAt(i);
+    }
+  }
+}
+
+// Seleciona uma nova palavra da categoria especificada
+void selecionarNovaPalavra(int categoria) {
+  categoriaSelecionada = categoria;
+  int indice = (int)random(palavras[categoria].length);
+  palavraSecreta = palavras[categoria][indice];
+  
+  // Inicializar array de letras descobertas
+  letrasDescobertas = new char[palavraSecreta.length()];
+  for (int i = 0; i < letrasDescobertas.length; i++) {
+    if (palavraSecreta.charAt(i) == ' ') {
+      letrasDescobertas[i] = ' ';
+    } else {
+      letrasDescobertas[i] = '_';
+    }
+  }
+  
+  // Reiniciar variáveis do jogo
+  letrasErradas.clear();
+  letrasTentadas.clear();
+  tentativasRestantes = 6;
+  jogoAtivo = true;
+  vitoria = false;
+  derrota = false;
+}
+
+// Reinicia o jogo com a mesma categoria
+void reiniciarJogo() {
+  selecionarNovaPalavra(categoriaSelecionada);
+}
+
+// Trata pressionamento de teclas
+void keyPressed() {
+  if (jogoAtivo && !vitoria && !derrota) {
+    if (key >= 'A' && key <= 'Z') {
+      char letra = key;
+      processarLetra(letra);
+    } else if (key >= 'a' && key <= 'z') {
+      char letra = Character.toUpperCase(key);
+      processarLetra(letra);
+    }
+  }
+}
+
+// Processa uma letra tentada pelo jogador
+void processarLetra(char letra) {
+  // Verificar se a letra já foi tentada
+  if (letrasTentadas.contains(letra)) {
+    return;
+  }
+  
+  letrasTentadas.add(letra);
+  boolean acertou = false;
+  
+  // Verificar se a letra está na palavra
+  for (int i = 0; i < palavraSecreta.length(); i++) {
+    if (palavraSecreta.charAt(i) == letra) {
+      letrasDescobertas[i] = letra;
+      acertou = true;
+    }
+  }
+  
+  if (!acertou) {
+    letrasErradas.add(letra);
+    tentativasRestantes--;
+  }
+}
+
+// Trata cliques do mouse
+void mousePressed() {
+  if (!jogoAtivo) {
+    // Verificar cliques na tela inicial (seleção de categoria)
+    for (int i = 0; i < categorias.length; i++) {
+      if (mouseX > width/2 - 150 && mouseX < width/2 + 150 &&
+          mouseY > 200 + i*70 && mouseY < 250 + i*70) {
+        selecionarNovaPalavra(i);
+        return;
+      }
+    }
+  } else if (vitoria || derrota) {
+    // Verificar clique no botão "Jogar Novamente"
+    if (mouseX > width/2 - 100 && mouseX < width/2 + 100 &&
+        mouseY > height/2 + 100 && mouseY < height/2 + 150) {
+      reiniciarJogo();
+    }
+  }
+}
