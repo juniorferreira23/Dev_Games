@@ -1,0 +1,196 @@
+// Estados: 0 = menu, 1 = jogando, 2 = vencedor
+int estado = 0;
+int dificuldade = 1; // 0 = fácil, 1 = médio, 2 = difícil
+
+// Pontuação
+int placarEsquerda = 0;
+int placarDireita = 0;
+int limitePlacar = 5;
+String vencedor = "";
+int tempoVitoria;
+
+// Bola
+float bolaX, bolaY;
+float bolaDX, bolaDY;
+float bolaTamanho = 15;
+float velocidadeBase;
+
+// Palhetas
+float palhetaAltura;
+float palhetaLargura = 10;
+float palhetaEsquerdaY, palhetaDireitaY;
+float palhetaVel = 6;
+
+// Controles
+boolean wPress, sPress, upPress, downPress;
+
+void setup() {
+  size(700, 400);
+  textAlign(CENTER, CENTER);
+  textSize(24);
+}
+
+void draw() {
+  background(30);
+  
+  if (estado == 0) {
+    desenhaMenu();
+  } else if (estado == 1) {
+    atualizaBola();
+    atualizaPalhetas();
+    desenhaJogo();
+    verificaPonto();
+  } else if (estado == 2) {
+    desenhaVencedor();
+    if (millis() - tempoVitoria > 4000) {
+      reiniciar();
+    }
+  }
+}
+
+// ---------- Menu ----------
+void desenhaMenu() {
+  fill(255);
+  text("JOGO PONG", width / 2, 50);
+  textSize(20);
+  text("Selecione a dificuldade:", width / 2, 120);
+  text("1 - Fácil", width / 2, 160);
+  text("2 - Médio", width / 2, 200);
+  text("3 - Difícil", width / 2, 240);
+  textSize(24);
+}
+
+void keyPressed() {
+  if (estado == 0) {
+    if (key == '1') iniciarJogo(0);
+    if (key == '2') iniciarJogo(1);
+    if (key == '3') iniciarJogo(2);
+  } else if (estado == 1) {
+    if (key == 'w') wPress = true;
+    if (key == 's') sPress = true;
+    if (keyCode == UP) upPress = true;
+    if (keyCode == DOWN) downPress = true;
+  }
+}
+
+void keyReleased() {
+  if (estado == 1) {
+    if (key == 'w') wPress = false;
+    if (key == 's') sPress = false;
+    if (keyCode == UP) upPress = false;
+    if (keyCode == DOWN) downPress = false;
+  }
+}
+
+// ---------- Inicialização ----------
+void iniciarJogo(int nivel) {
+  dificuldade = nivel;
+  if (nivel == 0) {
+    palhetaAltura = 100;
+    velocidadeBase = 4;
+  } else if (nivel == 1) {
+    palhetaAltura = 80;
+    velocidadeBase = 5.5;
+  } else {
+    palhetaAltura = 60;
+    velocidadeBase = 7;
+  }
+
+  bolaX = width / 2;
+  bolaY = height / 2;
+  bolaDX = random(1) > 0.5 ? velocidadeBase : -velocidadeBase;
+  bolaDY = random(-2, 2);
+
+  palhetaEsquerdaY = height / 2 - palhetaAltura / 2;
+  palhetaDireitaY = height / 2 - palhetaAltura / 2;
+
+  placarEsquerda = 0;
+  placarDireita = 0;
+  estado = 1;
+}
+
+// ---------- Jogo ----------
+void atualizaPalhetas() {
+  if (wPress) palhetaEsquerdaY -= palhetaVel;
+  if (sPress) palhetaEsquerdaY += palhetaVel;
+  if (upPress) palhetaDireitaY -= palhetaVel;
+  if (downPress) palhetaDireitaY += palhetaVel;
+
+  palhetaEsquerdaY = constrain(palhetaEsquerdaY, 0, height - palhetaAltura);
+  palhetaDireitaY = constrain(palhetaDireitaY, 0, height - palhetaAltura);
+}
+
+void atualizaBola() {
+  bolaX += bolaDX;
+  bolaY += bolaDY;
+
+  if (bolaY <= 0 || bolaY >= height) bolaDY *= -1;
+
+  // Colisão com palhetas
+  if (bolaX - bolaTamanho/2 <= palhetaLargura &&
+      bolaY >= palhetaEsquerdaY && bolaY <= palhetaEsquerdaY + palhetaAltura) {
+    bolaDX *= -1;
+    bolaX = palhetaLargura + bolaTamanho/2;
+  }
+
+  if (bolaX + bolaTamanho/2 >= width - palhetaLargura &&
+      bolaY >= palhetaDireitaY && bolaY <= palhetaDireitaY + palhetaAltura) {
+    bolaDX *= -1;
+    bolaX = width - palhetaLargura - bolaTamanho/2;
+  }
+}
+
+void desenhaJogo() {
+  // Palhetas
+  fill(255);
+  rect(0, palhetaEsquerdaY, palhetaLargura, palhetaAltura);
+  rect(width - palhetaLargura, palhetaDireitaY, palhetaLargura, palhetaAltura);
+  
+  // Bola
+  ellipse(bolaX, bolaY, bolaTamanho, bolaTamanho);
+  
+  // Placar
+  textSize(20);
+  text(placarEsquerda, width/4, 30);
+  text(placarDireita, 3*width/4, 30);
+}
+
+void verificaPonto() {
+  if (bolaX < 0) {
+    placarDireita++;
+    reiniciarBola();
+  } else if (bolaX > width) {
+    placarEsquerda++;
+    reiniciarBola();
+  }
+
+  if (placarEsquerda >= limitePlacar) {
+    vencedor = "Jogador da Esquerda venceu!";
+    estado = 2;
+    tempoVitoria = millis();
+  } else if (placarDireita >= limitePlacar) {
+    vencedor = "Jogador da Direita venceu!";
+    estado = 2;
+    tempoVitoria = millis();
+  }
+}
+
+void reiniciarBola() {
+  bolaX = width / 2;
+  bolaY = height / 2;
+  bolaDX = random(1) > 0.5 ? velocidadeBase : -velocidadeBase;
+  bolaDY = random(-2, 2);
+}
+
+void desenhaVencedor() {
+  fill(255);
+  textSize(28);
+  text(vencedor, width / 2, height / 2);
+  textSize(16);
+  text("Reiniciando em instantes...", width / 2, height / 2 + 40);
+}
+
+void reiniciar() {
+  estado = 0;
+  vencedor = "";
+}
