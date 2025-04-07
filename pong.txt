@@ -1,0 +1,303 @@
+// Variáveis do jogo
+int larguraTela = 800;
+int alturaTela = 600;
+int meioTelaX = larguraTela / 2;
+int meioTelaY = alturaTela / 2;
+
+// Variáveis das paletas
+int larguraPaleta = 15;
+int alturaPaletaFacil = 150;
+int alturaPaletaMedio = 100;
+int alturaPaletaDificil = 60;
+int alturaPaletaJogador = alturaPaletaFacil; // Começa no fácil
+int alturaPaletaCPU = alturaPaletaFacil;
+
+int posicaoPaletaJogador = alturaTela / 2;
+int posicaoPaletaCPU = alturaTela / 2;
+int velocidadePaletaJogador = 8;
+int velocidadePaletaCPU = 5;
+
+// Variáveis da bola
+int tamanhoBola = 20;
+float posicaoBolaX = meioTelaX;
+float posicaoBolaY = meioTelaY;
+float velocidadeBolaX = 5;
+float velocidadeBolaY = 5;
+
+// Placar
+int placarJogador = 0;
+int placarCPU = 0;
+int placarMaximo = 5; // Limite para vencer
+boolean jogoTerminou = false;
+String vencedor = "";
+
+// Estados do jogo
+final int TELA_INICIO = 0;
+final int JOGANDO = 1;
+final int TELA_VENCEDOR = 2;
+int estadoJogo = TELA_INICIO;
+
+// Dificuldade
+final int FACIL = 0;
+final int MEDIO = 1;
+final int DIFICIL = 2;
+int dificuldade = FACIL;
+
+void setup() {
+  size(800, 600);
+  noStroke();
+  rectMode(CENTER);
+  ellipseMode(CENTER);
+  textAlign(CENTER, CENTER);
+  textSize(32);
+}
+
+void draw() {
+  background(0);
+  
+  if (estadoJogo == TELA_INICIO) {
+    telaInicio();
+  } else if (estadoJogo == JOGANDO) {
+    jogar();
+  } else if (estadoJogo == TELA_VENCEDOR) {
+    telaVencedor();
+  }
+}
+
+void telaInicio() {
+  fill(255);
+  text("PONG MODIFICADO", meioTelaX, 100);
+  text("Selecione a dificuldade:", meioTelaX, 200);
+  
+  // Botão Fácil
+  fill(dificuldade == FACIL ? color(0, 255, 0) : 255);
+  rect(meioTelaX - 150, 300, 200, 60);
+  fill(0);
+  text("Fácil", meioTelaX - 150, 300);
+  
+  // Botão Médio
+  fill(dificuldade == MEDIO ? color(255, 255, 0) : 255);
+  rect(meioTelaX, 300, 200, 60);
+  fill(0);
+  text("Médio", meioTelaX, 300);
+  
+  // Botão Difícil
+  fill(dificuldade == DIFICIL ? color(255, 0, 0) : 255);
+  rect(meioTelaX + 150, 300, 200, 60);
+  fill(0);
+  text("Difícil", meioTelaX + 150, 300);
+  
+  // Botão Iniciar
+  fill(0, 0, 255);
+  rect(meioTelaX, 400, 200, 60);
+  fill(255);
+  text("Iniciar Jogo", meioTelaX, 400);
+}
+
+void mousePressed() {
+  if (estadoJogo == TELA_INICIO) {
+    // Verifica clique nos botões de dificuldade
+    if (mouseX > meioTelaX - 250 && mouseX < meioTelaX - 50 && mouseY > 270 && mouseY < 330) {
+      dificuldade = FACIL;
+    } else if (mouseX > meioTelaX - 100 && mouseX < meioTelaX + 100 && mouseY > 270 && mouseY < 330) {
+      dificuldade = MEDIO;
+    } else if (mouseX > meioTelaX + 50 && mouseX < meioTelaX + 250 && mouseY > 270 && mouseY < 330) {
+      dificuldade = DIFICIL;
+    }
+    // Verifica clique no botão iniciar
+    else if (mouseX > meioTelaX - 100 && mouseX < meioTelaX + 100 && mouseY > 370 && mouseY < 430) {
+      iniciarJogo();
+    }
+  } else if (estadoJogo == TELA_VENCEDOR) {
+    if (mouseX > meioTelaX - 100 && mouseX < meioTelaX + 100 && mouseY > 370 && mouseY < 430) {
+      reiniciarJogo();
+    }
+  }
+}
+
+void iniciarJogo() {
+  // Ajusta as configurações baseado na dificuldade
+  switch(dificuldade) {
+    case FACIL:
+      alturaPaletaJogador = alturaPaletaFacil;
+      alturaPaletaCPU = alturaPaletaFacil;
+      velocidadeBolaX = 4;
+      velocidadeBolaY = 4;
+      velocidadePaletaCPU = 4;
+      break;
+    case MEDIO:
+      alturaPaletaJogador = alturaPaletaMedio;
+      alturaPaletaCPU = alturaPaletaMedio;
+      velocidadeBolaX = 6;
+      velocidadeBolaY = 6;
+      velocidadePaletaCPU = 6;
+      break;
+    case DIFICIL:
+      alturaPaletaJogador = alturaPaletaDificil;
+      alturaPaletaCPU = alturaPaletaDificil;
+      velocidadeBolaX = 8;
+      velocidadeBolaY = 8;
+      velocidadePaletaCPU = 8;
+      break;
+  }
+  
+  estadoJogo = JOGANDO;
+  placarJogador = 0;
+  placarCPU = 0;
+  jogoTerminou = false;
+  posicaoBolaX = meioTelaX;
+  posicaoBolaY = meioTelaY;
+}
+
+void reiniciarJogo() {
+  estadoJogo = TELA_INICIO;
+}
+
+void telaVencedor() {
+  fill(255);
+  text("FIM DE JOGO", meioTelaX, 150);
+  text(vencedor + " VENCEU!", meioTelaX, 250);
+  
+  // Botão Reiniciar
+  fill(0, 0, 255);
+  rect(meioTelaX, 400, 200, 60);
+  fill(255);
+  text("Jogar Novamente", meioTelaX, 400);
+}
+
+void jogar() {
+  // Desenha elementos do jogo
+  desenharPaletas();
+  desenharBola();
+  desenharPlacar();
+  desenharLinhaCentral();
+  
+  // Movimentação
+  moverPaletaJogador();
+  moverPaletaCPU();
+  moverBola();
+  
+  // Verifica colisões
+  verificarColisoes();
+  
+  // Verifica se alguém ganhou
+  verificarVencedor();
+}
+
+void desenharPaletas() {
+  // Paleta do jogador (esquerda)
+  rect(larguraPaleta/2, posicaoPaletaJogador, larguraPaleta, alturaPaletaJogador);
+  
+  // Paleta da CPU (direita)
+  rect(larguraTela - larguraPaleta/2, posicaoPaletaCPU, larguraPaleta, alturaPaletaCPU);
+}
+
+void desenharBola() {
+  ellipse(posicaoBolaX, posicaoBolaY, tamanhoBola, tamanhoBola);
+}
+
+void desenharPlacar() {
+  text(placarJogador + "   " + placarCPU, meioTelaX, 50);
+}
+
+void desenharLinhaCentral() {
+  stroke(255);
+  for (int i = 0; i < alturaTela; i += 40) {
+    line(meioTelaX, i, meioTelaX, i + 20);
+  }
+  noStroke();
+}
+
+void moverPaletaJogador() {
+  // Movimento com as teclas W e S
+  if (keyPressed) {
+    if (key == 'w' || key == 'W') {
+      posicaoPaletaJogador -= velocidadePaletaJogador;
+    }
+    if (key == 's' || key == 'S') {
+      posicaoPaletaJogador += velocidadePaletaJogador;
+    }
+  }
+  
+  // Limitar paleta dentro da tela
+  posicaoPaletaJogador = constrain(posicaoPaletaJogador, alturaPaletaJogador/2, alturaTela - alturaPaletaJogador/2);
+}
+
+void moverPaletaCPU() {
+  // IA simples - seguir a bola
+  if (posicaoPaletaCPU + alturaPaletaCPU/4 < posicaoBolaY) {
+    posicaoPaletaCPU += velocidadePaletaCPU;
+  } else if (posicaoPaletaCPU - alturaPaletaCPU/4 > posicaoBolaY) {
+    posicaoPaletaCPU -= velocidadePaletaCPU;
+  }
+  
+  // Limitar paleta dentro da tela
+  posicaoPaletaCPU = constrain(posicaoPaletaCPU, alturaPaletaCPU/2, alturaTela - alturaPaletaCPU/2);
+}
+
+void moverBola() {
+  posicaoBolaX += velocidadeBolaX;
+  posicaoBolaY += velocidadeBolaY;
+  
+  // Rebater nas bordas superior e inferior
+  if (posicaoBolaY <= tamanhoBola/2 || posicaoBolaY >= alturaTela - tamanhoBola/2) {
+    velocidadeBolaY *= -1;
+  }
+  
+  // Verificar se passou pelas paletas (ponto)
+  if (posicaoBolaX <= 0) {
+    placarCPU++;
+    resetarBola();
+  }
+  
+  if (posicaoBolaX >= larguraTela) {
+    placarJogador++;
+    resetarBola();
+  }
+}
+
+void verificarColisoes() {
+  // Colisão com a paleta do jogador
+  if (posicaoBolaX - tamanhoBola/2 <= larguraPaleta && 
+      posicaoBolaY >= posicaoPaletaJogador - alturaPaletaJogador/2 && 
+      posicaoBolaY <= posicaoPaletaJogador + alturaPaletaJogador/2) {
+    velocidadeBolaX = abs(velocidadeBolaX); // Garante que seja positivo (direita)
+    // Ajusta o ângulo baseado em onde a bola acertou a paleta
+    float diferencaY = posicaoBolaY - posicaoPaletaJogador;
+    velocidadeBolaY = diferencaY * 0.1;
+  }
+  
+  // Colisão com a paleta da CPU
+  if (posicaoBolaX + tamanhoBola/2 >= larguraTela - larguraPaleta && 
+      posicaoBolaY >= posicaoPaletaCPU - alturaPaletaCPU/2 && 
+      posicaoBolaY <= posicaoPaletaCPU + alturaPaletaCPU/2) {
+    velocidadeBolaX = -abs(velocidadeBolaX); // Garante que seja negativo (esquerda)
+    // Ajusta o ângulo baseado em onde a bola acertou a paleta
+    float diferencaY = posicaoBolaY - posicaoPaletaCPU;
+    velocidadeBolaY = diferencaY * 0.1;
+  }
+}
+
+void resetarBola() {
+  posicaoBolaX = meioTelaX;
+  posicaoBolaY = meioTelaY;
+  // Direção aleatória no eixo Y
+  velocidadeBolaY = random(-3, 3);
+  // Mantém a direção X mas randomiza um pouco
+  velocidadeBolaX = (velocidadeBolaX > 0 ? 1 : -1) * random(3, 5);
+  
+  // Pequena pausa para dar tempo de se preparar
+  delay(500);
+}
+
+void verificarVencedor() {
+  if (placarJogador >= placarMaximo || placarCPU >= placarMaximo) {
+    jogoTerminou = true;
+    if (placarJogador > placarCPU) {
+      vencedor = "JOGADOR";
+    } else {
+      vencedor = "CPU";
+    }
+    estadoJogo = TELA_VENCEDOR;
+  }
+}

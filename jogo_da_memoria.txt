@@ -1,0 +1,429 @@
+// Jogo da Memória no Processing - Versão Corrigida
+// Autor: [Seu Nome]
+// Versão: 1.1
+
+// Estados do jogo
+final int MENU = 0;
+final int JOGANDO = 1;
+final int VITORIA = 2;
+int estadoJogo = MENU;
+
+// Configurações do jogo
+int cols = 6;
+int rows = 4;
+int totalPares = (cols * rows) / 2;
+int tamanhoCarta = 100;
+int espacamento = 10;
+int margemX, margemY;
+
+// Temas disponíveis
+String[] temas = {"Frutas", "Objetos", "Animais", "Personagens"};
+int temaSelecionado = 0;
+PImage[][] imagensTemas;
+PImage[] cartas;
+PImage versoCarta;
+
+// Variáveis do jogo
+boolean[] cartasViradas;
+boolean[] cartasEncontradas;
+int carta1 = -1;
+int carta2 = -1;
+int paresEncontrados = 0;
+int tentativas = 0;
+boolean podeVirar = true;
+int tempoUltimaJogada = 0;
+int atrasoVirar = 1000; // 1 segundo
+
+// Elementos da interface
+PFont fonte;
+
+void setup() {
+  size(800, 600);
+  fonte = createFont("Arial", 24);
+  textFont(fonte);
+  
+  // Calcular margens para centralizar o grid
+  margemX = (width - (cols * (tamanhoCarta + espacamento) - espacamento)) / 2;
+  margemY = (height - (rows * (tamanhoCarta + espacamento) - espacamento)) / 2;
+  
+  // Carregar imagens
+  carregarImagens();
+  
+  // Inicializar cartas
+  inicializarCartas();
+  
+  // Criar imagem do verso da carta
+  versoCarta = createImage(tamanhoCarta, tamanhoCarta, RGB);
+  desenharVersoCarta();
+}
+
+void desenharVersoCarta() {
+  // Desenhar o verso da carta
+  PGraphics pg = createGraphics(tamanhoCarta, tamanhoCarta);
+  pg.beginDraw();
+  pg.background(0, 100, 200);
+  pg.fill(255);
+  pg.textSize(20);
+  pg.textAlign(CENTER, CENTER);
+  pg.text("?", pg.width/2, pg.height/2);
+  pg.endDraw();
+  versoCarta = pg.get();
+}
+
+void carregarImagens() {
+  // Aqui você deve carregar as imagens para cada tema
+  // Este é um exemplo com imagens simples geradas
+  imagensTemas = new PImage[temas.length][totalPares];
+  
+  for (int t = 0; t < temas.length; t++) {
+    for (int i = 0; i < totalPares; i++) {
+      // Criar PGraphics para desenhar a imagem
+      PGraphics pg = createGraphics(tamanhoCarta, tamanhoCarta);
+      pg.beginDraw();
+      
+      // Preencher fundo com cor base
+      if (t == 0) { // Frutas
+        pg.background(100 + i * 20, 150 + i * 10, 50 + i * 5);
+      } else if (t == 1) { // Objetos
+        pg.background(50 + i * 5, 100 + i * 20, 150 + i * 10);
+      } else if (t == 2) { // Animais
+        pg.background(150 + i * 10, 50 + i * 5, 100 + i * 20);
+      } else { // Personagens
+        pg.background(200 - i * 5, 100 + i * 15, 50 + i * 25);
+      }
+      
+      // Adicionar padrão
+      pg.noStroke();
+      for (int x = 0; x < pg.width; x += 10) {
+        for (int y = 0; y < pg.height; y += 10) {
+          if ((x + y) % 20 == 0) {
+            pg.fill(255, 50);
+            pg.rect(x, y, 10, 10);
+          }
+        }
+      }
+      
+      // Adicionar texto para identificar
+      pg.fill(255);
+      pg.textSize(20);
+      pg.textAlign(CENTER, CENTER);
+      pg.text(temas[t].charAt(0) + "" + (i+1), pg.width/2, pg.height/2);
+      
+      pg.endDraw();
+      
+      imagensTemas[t][i] = pg.get();
+    }
+  }
+}
+
+void inicializarCartas() {
+  cartas = new PImage[totalPares * 2];
+  cartasViradas = new boolean[totalPares * 2];
+  cartasEncontradas = new boolean[totalPares * 2];
+  
+  // Preencher com pares de imagens
+  for (int i = 0; i < totalPares; i++) {
+    cartas[i] = imagensTemas[temaSelecionado][i];
+    cartas[i + totalPares] = imagensTemas[temaSelecionado][i];
+  }
+  
+  // Embaralhar cartas
+  for (int i = 0; i < cartas.length; i++) {
+    int r = (int)random(i, cartas.length);
+    PImage temp = cartas[i];
+    cartas[i] = cartas[r];
+    cartas[r] = temp;
+  }
+  
+  // Resetar estado do jogo
+  for (int i = 0; i < cartasViradas.length; i++) {
+    cartasViradas[i] = false;
+    cartasEncontradas[i] = false;
+  }
+  
+  carta1 = -1;
+  carta2 = -1;
+  paresEncontrados = 0;
+  tentativas = 0;
+}
+
+void draw() {
+  background(240);
+  
+  // Atualizar lógica do jogo
+  update();
+  
+  switch(estadoJogo) {
+    case MENU:
+      desenharMenu();
+      break;
+    case JOGANDO:
+      desenharJogo();
+      break;
+    case VITORIA:
+      desenharVitoria();
+      break;
+  }
+}
+
+
+void desenharMenu() {
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(36);
+  text("Jogo da Memória", width/2, 100);
+  
+  textSize(24);
+  text("Selecione um tema:", width/2, 180);
+  
+  // Botões de tema
+  for (int i = 0; i < temas.length; i++) {
+    fill(i == temaSelecionado ? color(100, 200, 100) : color(200));
+    rect(width/2 - 150, 230 + i * 60, 300, 50, 10);
+    fill(i == temaSelecionado ? color(255) : color(0));
+    text(temas[i], width/2, 255 + i * 60);
+  }
+  
+  // Botão iniciar
+  fill(50, 150, 255);
+  rect(width/2 - 100, 500, 200, 50, 10);
+  fill(255);
+  text("Iniciar Jogo", width/2, 525);
+}
+
+void desenharJogo() {
+  // Desenhar cartas
+  for (int i = 0; i < cols; i++) {
+    for (int j = 0; j < rows; j++) {
+      int index = i + j * cols;
+      int x = margemX + i * (tamanhoCarta + espacamento);
+      int y = margemY + j * (tamanhoCarta + espacamento);
+      
+      if (cartasEncontradas[index]) {
+        // Carta já encontrada - mostrar com brilho
+        fill(255, 255, 0, 100);
+        rect(x, y, tamanhoCarta, tamanhoCarta, 5);
+        image(cartas[index], x, y);
+      } else if (cartasViradas[index]) {
+        // Carta virada - mostrar imagem
+        image(cartas[index], x, y);
+      } else {
+        // Carta não virada - mostrar verso
+        image(versoCarta, x, y);
+      }
+      
+      // Efeito de hover
+      if (mouseX >= x && mouseX <= x + tamanhoCarta && 
+          mouseY >= y && mouseY <= y + tamanhoCarta && 
+          !cartasEncontradas[index] && 
+          (carta1 != index && carta2 != index)) {
+        fill(255, 255, 255, 50);
+        rect(x, y, tamanhoCarta, tamanhoCarta, 5);
+      }
+    }
+  }
+  
+  // Informações do jogo
+  fill(0);
+  textAlign(LEFT, TOP);
+  textSize(18);
+  text("Tema: " + temas[temaSelecionado], 20, 20);
+  text("Tentativas: " + tentativas, 20, 50);
+  text("Pares encontrados: " + paresEncontrados + "/" + totalPares, 20, 80);
+  
+  // Botão voltar ao menu
+  fill(200, 100, 100);
+  rect(width - 120, 20, 100, 40, 5);
+  fill(255);
+  textAlign(CENTER, CENTER);
+  text("Menu", width - 70, 40);
+}
+
+void desenharVitoria() {
+  fill(0);
+  textAlign(CENTER, CENTER);
+  textSize(36);
+  text("Parabéns!", width/2, height/2 - 60);
+  textSize(24);
+  text("Você completou o jogo em " + tentativas + " tentativas.", width/2, height/2);
+  
+  // Botão jogar novamente
+  fill(100, 200, 100);
+  rect(width/2 - 100, height/2 + 60, 200, 50, 10);
+  fill(255);
+  text("Jogar Novamente", width/2, height/2 + 85);
+  
+  // Botão voltar ao menu
+  fill(50, 150, 255);
+  rect(width/2 - 100, height/2 + 130, 200, 50, 10);
+  fill(255);
+  text("Menu", width/2, height/2 + 155);
+}
+
+void mousePressed() {
+  if (estadoJogo == MENU) {
+    // Verificar clique nos botões de tema
+    for (int i = 0; i < temas.length; i++) {
+      if (mouseX >= width/2 - 150 && mouseX <= width/2 + 150 &&
+          mouseY >= 230 + i * 60 && mouseY <= 280 + i * 60) {
+        temaSelecionado = i;
+      }
+    }
+    
+    // Verificar clique no botão iniciar
+    if (mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+        mouseY >= 500 && mouseY <= 550) {
+      inicializarCartas();
+      estadoJogo = JOGANDO;
+    }
+  } 
+  else if (estadoJogo == JOGANDO) {
+    // Verificar clique no botão menu
+    if (mouseX >= width - 120 && mouseX <= width - 20 &&
+        mouseY >= 20 && mouseY <= 60) {
+      estadoJogo = MENU;
+      return;
+    }
+    
+    // Verificar clique nas cartas
+    if (podeVirar) {
+      for (int i = 0; i < cols; i++) {
+        for (int j = 0; j < rows; j++) {
+          int index = i + j * cols;
+          int x = margemX + i * (tamanhoCarta + espacamento);
+          int y = margemY + j * (tamanhoCarta + espacamento);
+          
+          if (mouseX >= x && mouseX <= x + tamanhoCarta && 
+              mouseY >= y && mouseY <= y + tamanhoCarta && 
+              !cartasViradas[index] && !cartasEncontradas[index]) {
+            
+            // Virar a carta
+            cartasViradas[index] = true;
+            
+            if (carta1 == -1) {
+              carta1 = index;
+            } else if (carta2 == -1 && index != carta1) {
+              carta2 = index;
+              tentativas++;
+              
+              // Verificar se formam um par
+              if (cartas[carta1] == cartas[carta2]) {
+                cartasEncontradas[carta1] = true;
+                cartasEncontradas[carta2] = true;
+                carta1 = -1;
+                carta2 = -1;
+                paresEncontrados++;
+                
+                // Verificar vitória
+                if (paresEncontrados == totalPares) {
+                  estadoJogo = VITORIA;
+                }
+              } else {
+                // Não é par, aguardar um pouco e virar de volta
+                podeVirar = false;
+                tempoUltimaJogada = millis();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else if (estadoJogo == VITORIA) {
+    // Verificar clique no botão jogar novamente
+    if (mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+        mouseY >= height/2 + 60 && mouseY <= height/2 + 110) {
+      inicializarCartas();
+      estadoJogo = JOGANDO;
+    }
+    
+    // Verificar clique no botão menu
+    if (mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+        mouseY >= height/2 + 130 && mouseY <= height/2 + 180) {
+      estadoJogo = MENU;
+    }
+  }
+}
+
+void keyPressed() {
+  // Pressionar ESC para voltar ao menu
+  if (key == ESC && estadoJogo != MENU) {
+    estadoJogo = MENU;
+    key = 0; // Prevenir comportamento padrão
+  }
+}
+
+void mouseMoved() {
+  // Mudar cursor quando sobre algo clicável
+  if (estadoJogo == MENU) {
+    boolean sobreBotao = false;
+    
+    // Verificar temas
+    for (int i = 0; i < temas.length; i++) {
+      if (mouseX >= width/2 - 150 && mouseX <= width/2 + 150 &&
+          mouseY >= 230 + i * 60 && mouseY <= 280 + i * 60) {
+        sobreBotao = true;
+        break;
+      }
+    }
+    
+    // Verificar botão iniciar
+    if (!sobreBotao && mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+        mouseY >= 500 && mouseY <= 550) {
+      sobreBotao = true;
+    }
+    
+    cursor(sobreBotao ? HAND : ARROW);
+  } 
+  else if (estadoJogo == JOGANDO) {
+    boolean sobreCarta = false;
+    
+    // Verificar botão menu
+    if (mouseX >= width - 120 && mouseX <= width - 20 &&
+        mouseY >= 20 && mouseY <= 60) {
+      cursor(HAND);
+      return;
+    }
+    
+    // Verificar cartas
+    for (int i = 0; i < cols; i++) {
+      for (int j = 0; j < rows; j++) {
+        int index = i + j * cols;
+        int x = margemX + i * (tamanhoCarta + espacamento);
+        int y = margemY + j * (tamanhoCarta + espacamento);
+        
+        if (mouseX >= x && mouseX <= x + tamanhoCarta && 
+            mouseY >= y && mouseY <= y + tamanhoCarta && 
+            !cartasEncontradas[index] && 
+            (carta1 != index && carta2 != index)) {
+          sobreCarta = true;
+          break;
+        }
+      }
+      if (sobreCarta) break;
+    }
+    
+    cursor(sobreCarta ? HAND : ARROW);
+  } 
+  else if (estadoJogo == VITORIA) {
+    // Verificar botões
+    boolean sobreBotao = 
+      (mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+       mouseY >= height/2 + 60 && mouseY <= height/2 + 110) ||
+      (mouseX >= width/2 - 100 && mouseX <= width/2 + 100 &&
+       mouseY >= height/2 + 130 && mouseY <= height/2 + 180);
+    
+    cursor(sobreBotao ? HAND : ARROW);
+  }
+}
+
+void update() {
+  // Verificar se é hora de virar as cartas para trás
+  if (!podeVirar && millis() - tempoUltimaJogada > atrasoVirar) {
+    cartasViradas[carta1] = false;
+    cartasViradas[carta2] = false;
+    carta1 = -1;
+    carta2 = -1;
+    podeVirar = true;
+  }
+}
